@@ -24,6 +24,8 @@
 - **Velero 集成**：与 Velero 深度集成，同时保持独立运行能力
 - **智能调度**：AI 驱动的备份频率优化（可选）
 - **监控告警**：Prometheus 指标导出、多渠道告警（Slack、Email）
+- **Web UI 管理**：直观的 Web 界面，支持备份、恢复、调度的全生命周期管理
+- **实时状态监控**：实时显示系统状态、备份进度和历史记录
 
 ### 🌐 阿里云特别支持
 
@@ -144,6 +146,45 @@ spec:
   quiesceCluster: true
 ```
 
+### Web UI 使用
+
+#### 启动后端 API 服务
+
+```bash
+# 进入后端目录
+cd backend
+
+# 安装依赖
+go mod tidy
+
+# 启动 API 服务
+go run main.go
+```
+
+#### 启动前端 Web UI
+
+```bash
+# 进入前端目录
+cd web-ui
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+#### 访问 Web UI
+
+打开浏览器，访问 `http://localhost:5173` 即可进入 Etcd Guardian Web UI。
+
+#### Web UI 功能
+
+- **Dashboard**：系统概览、关键指标、最近备份和调度信息
+- **Backups**：备份列表、备份详情、备份创建和管理
+- **Restores**：恢复列表、恢复详情、恢复创建和管理
+- **Schedules**：调度列表、调度创建、编辑和立即运行
+
 ## 📊 架构概览
 
 ```mermaid
@@ -151,12 +192,14 @@ graph TB
     subgraph "用户交互层"
         CLI[CLI工具]
         K8S_API[Kubernetes API]
+        WEB_UI[Web UI]
     end
 
     subgraph "控制平面"
         BACKUP_CTRL[Backup Controller]
         RESTORE_CTRL[Restore Controller]
         SCHEDULE_CTRL[Schedule Controller]
+        API_SERVER[API Server]
     end
 
     subgraph "执行层"
@@ -173,6 +216,10 @@ graph TB
 
     CLI --> BACKUP_CTRL
     K8S_API --> BACKUP_CTRL
+    WEB_UI --> API_SERVER
+    API_SERVER --> BACKUP_CTRL
+    API_SERVER --> RESTORE_CTRL
+    API_SERVER --> SCHEDULE_CTRL
     BACKUP_CTRL --> SNAPSHOT
     SNAPSHOT --> VALIDATE
     VALIDATE --> S3
