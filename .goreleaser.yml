@@ -1,0 +1,315 @@
+project_name: etcdguardian
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - make generate
+    - make manifests
+
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: manager
+    main: ./cmd/manager
+    binary: manager
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 6
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.GitCommit={{.ShortCommit}}
+      - -X main.BuildDate={{.Date}}
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  - id: cli
+    main: ./cmd/cli
+    binary: etcdguardian
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 6
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.GitCommit={{.ShortCommit}}
+      - -X main.BuildDate={{.Date}}
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  - id: backend
+    main: ./backend
+    binary: backend
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.GitCommit={{.ShortCommit}}
+      - -X main.BuildDate={{.Date}}
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - id: manager
+    builds:
+      - manager
+    name_template: "{{ .ProjectName }}-manager_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - config/samples/*.yaml
+
+  - id: cli
+    builds:
+      - cli
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+  - id: backend
+    builds:
+      - backend
+    name_template: "{{ .ProjectName }}-backend_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: '🚀 Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: '🐛 Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: '🧰 Maintenance'
+      regexp: "^.*chore[(\\w)]*:+.*$"
+      order: 2
+    - title: '📝 Documentation'
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 3
+    - title: Other
+      order: 999
+
+release:
+  github:
+    owner: etcdguardian
+    name: etcdguardian
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## EtcdGuardian {{ .Tag }} ({{ .Date }})
+
+    Welcome to this new release!
+
+  footer: |
+    **Full Changelog**: https://github.com/etcdguardian/etcdguardian/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ## Installation
+
+    ### Using CLI
+
+    Download the CLI for your platform from the assets below.
+
+    ### Using Docker
+
+    ```bash
+    docker pull etcdguardian/operator:{{ .Tag }}
+    docker pull etcdguardian/backend:{{ .Tag }}
+    docker pull etcdguardian/web-ui:{{ .Tag }}
+    ```
+
+    ### Using Helm
+
+    ```bash
+    helm repo add etcdguardian https://etcdguardian.io/charts
+    helm install etcdguardian etcdguardian/etcdguardian --version {{ .Tag }}
+    ```
+
+dockers:
+  - image_templates:
+      - 'etcdguardian/operator:{{ .Tag }}'
+      - 'etcdguardian/operator:latest'
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--build-arg=VERSION={{.Version}}"
+      - "--build-arg=GIT_COMMIT={{.ShortCommit}}"
+      - "--build-arg=BUILD_DATE={{.Date}}"
+
+  - image_templates:
+      - 'etcdguardian/operator:{{ .Tag }}-arm64'
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--build-arg=VERSION={{.Version}}"
+      - "--build-arg=GIT_COMMIT={{.ShortCommit}}"
+      - "--build-arg=BUILD_DATE={{.Date}}"
+
+  - image_templates:
+      - 'etcdguardian/backend:{{ .Tag }}'
+      - 'etcdguardian/backend:latest'
+    dockerfile: Dockerfile.backend
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}-backend"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+
+docker_manifests:
+  - name_template: 'etcdguardian/operator:{{ .Tag }}'
+    image_templates:
+      - 'etcdguardian/operator:{{ .Tag }}'
+      - 'etcdguardian/operator:{{ .Tag }}-arm64'
+
+  - name_template: 'etcdguardian/operator:latest'
+    image_templates:
+      - 'etcdguardian/operator:latest'
+      - 'etcdguardian/operator:latest-arm64'
+
+docker_signs:
+  - artifacts: all
+    args:
+      - "sign"
+      - "--key"
+      - "{{ .Env.COSIGN_PRIVATE_KEY }}"
+      - "${artifact}@${digest}"
+    env:
+      - COSIGN_PASSWORD=${{ .Env.COSIGN_PASSWORD }}
+
+brews:
+  - name: etcdguardian
+    ids:
+      - cli
+    tap:
+      owner: etcdguardian
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    url_template: "https://github.com/etcdguardian/etcdguardian/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    folder: Formula
+    homepage: "https://github.com/etcdguardian/etcdguardian"
+    description: "A production-grade Kubernetes Operator for etcd backup and restore"
+    license: "Apache-2.0"
+    skip_upload: false
+    test: |
+      system "#{bin}/etcdguardian version"
+    install: |
+      bin.install "etcdguardian"
+
+scoops:
+  - bucket:
+      owner: etcdguardian
+      name: scoop-bucket
+      branch: main
+      token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://github.com/etcdguardian/etcdguardian"
+    description: "A production-grade Kubernetes Operator for etcd backup and restore"
+    license: Apache-2.0
+
+nfpms:
+  - id: packages
+    builds:
+      - cli
+    formats:
+      - deb
+      - rpm
+      - apk
+    maintainer: EtcdGuardian Team <team@etcdguardian.io>
+    homepage: https://etcdguardian.io
+    description: A production-grade Kubernetes Operator for etcd backup and restore
+    license: Apache-2.0
+    vendor: EtcdGuardian
+    bindir: /usr/bin
+    section: utils
+    priority: optional
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+
+announce:
+  skip: false
+  twitter:
+    enabled: false
+  discord:
+    enabled: false
+  slack:
+    enabled: false
+  teams:
+    enabled: false
+  smtp:
+    enabled: false
+  mattermost:
+    enabled: false

@@ -1,4 +1,4 @@
-# Binaries for programs and plugins
+# Binaries
 *.exe
 *.exe~
 *.dll
@@ -13,7 +13,6 @@ testbin/
 # Output of the go coverage tool
 *.out
 cover.out
-cover.html
 
 # Dependency directories
 vendor/
@@ -49,39 +48,38 @@ dist/
 *.tar.gz
 *.zip
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# Git
+.git/
+.gitignore
 
-# Logs
-*.log
+# Documentation
+*.md
+docs/
 
-# Test artifacts
-test-results/
-coverage/
+# CI/CD
+.github/
+.travis.yml
+.gitlab-ci.yml
 
-# Documentation builds
-site/
-public/
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
 
-# Cache
-.cache/
-.vite/
-node_modules/
-*.tsbuildinfo
+# Test files
+*_test.go
+testdata/
 
-# Backend specific
-backend/*.sum.bak
-backend/go.sum.bak
-
-# Web UI specific
+# Web UI
 web-ui/node_modules/
 web-ui/dist/
 web-ui/.vite/
 web-ui/.cache/
 
+# Backend
+backend/go.sum.bak
+backend/*.sum
+
 # Misc
 .qoder/
 README 2.md
-backend/go 2.sum
